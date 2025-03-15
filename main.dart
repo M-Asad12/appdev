@@ -1,143 +1,112 @@
 import 'package:flutter/material.dart';
+import 'datacontrol.dart';
+import 'viewdata.dart';
 
-void main() => runApp(MyApp());
+void main() {
+  runApp(MyApp());
+}
 
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      home: FirstPage(),
+      debugShowCheckedModeBanner: false,
+      home: RegistrationPage(),
     );
   }
 }
 
-class FirstPage extends StatelessWidget {
+class RegistrationPage extends StatefulWidget {
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('First Page')),
-      drawer: AppDrawer(),
-      body:
-          Center(child: Text('Muhammad Asad', style: TextStyle(fontSize: 24))),
-    );
-  }
+  _RegistrationPageState createState() => _RegistrationPageState();
 }
 
-class SecondPage extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('Second Page')),
-      drawer: AppDrawer(),
-      body: Center(
-        child: ElevatedButton(
-          onPressed: () {},
-          child: Text('Button'),
-        ),
-      ),
-    );
-  }
-}
+class _RegistrationPageState extends State<RegistrationPage> {
+  final _formKey = GlobalKey<FormState>();
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  bool _isActive = false;
 
-class ThirdPage extends StatelessWidget {
+  void _submitData() async {
+    if (_formKey.currentState!.validate()) {
+      Map<String, dynamic> newUser = {
+        'name': _nameController.text,
+        'email': _emailController.text,
+        'password': _passwordController.text,
+        'isActive': _isActive,
+      };
+
+      await DataControl.saveUser(newUser);
+
+      _nameController.clear();
+      _emailController.clear();
+      _passwordController.clear();
+      setState(() => _isActive = false);
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => ViewData()),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Third Page')),
-      drawer: AppDrawer(),
-      body: Center(
+      appBar: AppBar(title: Text('Registration Page')),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text('Muhammad Asad', style: TextStyle(fontSize: 24)),
-            SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () {},
-              child: Text('Button'),
+            Form(
+              key: _formKey,
+              child: Column(
+                children: [
+                  TextFormField(
+                    controller: _nameController,
+                    decoration: InputDecoration(labelText: 'Name'),
+                    validator: (value) =>
+                        value!.isEmpty ? 'Enter your name' : null,
+                  ),
+                  TextFormField(
+                    controller: _emailController,
+                    decoration: InputDecoration(labelText: 'Email'),
+                    validator: (value) =>
+                        value!.isEmpty ? 'Enter your email' : null,
+                  ),
+                  TextFormField(
+                    controller: _passwordController,
+                    decoration: InputDecoration(labelText: 'Password'),
+                    obscureText: true,
+                    validator: (value) =>
+                        value!.isEmpty ? 'Enter your password' : null,
+                  ),
+                  Row(
+                    children: [
+                      Text("Active"),
+                      Radio(
+                        value: true,
+                        groupValue: _isActive,
+                        onChanged: (value) =>
+                            setState(() => _isActive = value as bool),
+                      ),
+                      Text("Inactive"),
+                      Radio(
+                        value: false,
+                        groupValue: _isActive,
+                        onChanged: (value) =>
+                            setState(() => _isActive = value as bool),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 20),
+                  ElevatedButton(onPressed: _submitData, child: Text('Submit')),
+                ],
+              ),
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class FourthPage extends StatefulWidget {
-  @override
-  _FourthPageState createState() => _FourthPageState();
-}
-
-class _FourthPageState extends State<FourthPage> {
-  final List<String> names = [
-    'Muhammad Asad',
-    'Azeem',
-    'Awais',
-    'Zeeshan',
-    'Umar'
-  ];
-  int index = 0;
-
-  void toggleName() {
-    setState(() {
-      index = (index + 1) % names.length;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('Fourth Page')),
-      drawer: AppDrawer(),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(names[index], style: TextStyle(fontSize: 24)),
-            SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: toggleName,
-              child: Text('Toggle Name'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class AppDrawer extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Drawer(
-      child: ListView(
-        padding: EdgeInsets.zero,
-        children: [
-          DrawerHeader(
-            decoration: BoxDecoration(color: Colors.blue),
-            child: Text('Menu',
-                style: TextStyle(color: Colors.white, fontSize: 24)),
-          ),
-          ListTile(
-            title: Text('First Page'),
-            onTap: () => Navigator.push(
-                context, MaterialPageRoute(builder: (_) => FirstPage())),
-          ),
-          ListTile(
-            title: Text('Second Page'),
-            onTap: () => Navigator.push(
-                context, MaterialPageRoute(builder: (_) => SecondPage())),
-          ),
-          ListTile(
-            title: Text('Third Page'),
-            onTap: () => Navigator.push(
-                context, MaterialPageRoute(builder: (_) => ThirdPage())),
-          ),
-          ListTile(
-            title: Text('Fourth Page'),
-            onTap: () => Navigator.push(
-                context, MaterialPageRoute(builder: (_) => FourthPage())),
-          ),
-        ],
       ),
     );
   }
