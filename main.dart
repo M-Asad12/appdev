@@ -1,31 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
-import 'login.dart';
-import 'home.dart';
+import 'signup_screen.dart'; // Ensure this file exists
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized(); // Ensure Flutter is initialized
-  final SharedPreferences prefs = await SharedPreferences.getInstance();
-  final String? loggedInUser = prefs.getString('loggedInUser');
-  runApp(MyApp(loggedInUser: loggedInUser));
+void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  final String? loggedInUser;
-  const MyApp({super.key, this.loggedInUser});
-
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Flutter App',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
-      home: loggedInUser != null
-          ? HomePage(userData: jsonDecode(loggedInUser!))
-          : const LoginPage(),
+      debugShowCheckedModeBanner: false, // Removes the debug banner
+      title: 'Flutter SQLite Signup',
+      theme: ThemeData(primarySwatch: Colors.blue),
+      home: SignupScreen(), // Ensure SignupScreen is correctly implemented
     );
   }
 }
