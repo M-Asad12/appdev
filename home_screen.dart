@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'add_student_screen.dart';
+import 'student_model.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -13,7 +15,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   List<dynamic> studentRecords = [];
   bool isLoading = false;
-  Map<String, dynamic>? studentInfo;
+  Map<String, List<dynamic>> studentsMap = {};
 
   @override
   void initState() {
@@ -28,21 +30,19 @@ class _HomeScreenState extends State<HomeScreen> {
     if (data != null) {
       setState(() {
         studentRecords = json.decode(data);
-        _extractStudentInfo();
+        _organizeStudents();
       });
     }
   }
 
-  void _extractStudentInfo() {
-    if (studentRecords.isNotEmpty) {
-      final firstRecord = studentRecords[0];
-      studentInfo = {
-        'name': firstRecord['studentname'],
-        'fatherName': firstRecord['fathername'],
-        'program': firstRecord['progname'],
-        'shift': firstRecord['shift'],
-        'rollNo': firstRecord['rollno'],
-      };
+  void _organizeStudents() {
+    studentsMap = {};
+    for (var record in studentRecords) {
+      final rollNo = record['rollno'];
+      if (!studentsMap.containsKey(rollNo)) {
+        studentsMap[rollNo] = [];
+      }
+      studentsMap[rollNo]!.add(record);
     }
   }
 
@@ -65,7 +65,7 @@ class _HomeScreenState extends State<HomeScreen> {
         
         setState(() {
           studentRecords = data;
-          _extractStudentInfo();
+          _organizeStudents();
         });
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -89,7 +89,7 @@ class _HomeScreenState extends State<HomeScreen> {
     
     setState(() {
       studentRecords = [];
-      studentInfo = null;
+      studentsMap = {};
     });
     
     ScaffoldMessenger.of(context).showSnackBar(
@@ -97,111 +97,50 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Map<String, List<dynamic>> _groupBySemester() {
-    final Map<String, List<dynamic>> semesterMap = {};
-    
-    for (var record in studentRecords) {
-      final semester = record['mysemester'].toString();
-      if (!semesterMap.containsKey(semester)) {
-        semesterMap[semester] = [];
-      }
-      semesterMap[semester]!.add(record);
-    }
-    
-    return semesterMap;
+  Future<void> _addNewStudent(StudentRecord record) async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      studentRecords.add(record.toJson());
+      _organizeStudents();
+    });
+    await prefs.setString('student_data', json.encode(studentRecords));
   }
 
-  Widget _buildStudentInfoCard() {
-    if (studentInfo == null) return Container();
-    
+  Widget _buildStudentCard(String rollNo, List<dynamic> records) {
+    final firstRecord = records.first;
     return Card(
-      margin: const EdgeInsets.all(16),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Student Information',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 16),
-            _buildInfoRow('Name', studentInfo!['name']),
-            _buildInfoRow('Father Name', studentInfo!['fatherName']),
-            _buildInfoRow('Program', studentInfo!['program']),
-            _buildInfoRow('Shift', studentInfo!['shift']),
-            _buildInfoRow('Roll No', studentInfo!['rollNo']),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      margin: const EdgeInsets.all(8),
+      child: ExpansionTile(
+        title: Text('${firstRecord['studentname']} - $rollNo'),
+        subtitle: Text(firstRecord['progname']),
         children: [
-          SizedBox(
-            width: 120,
-            child: Text(
-              label,
-              style: const TextStyle(fontWeight: FontWeight.bold),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Father: ${firstRecord['fathername']}'),
+                Text('Shift: ${firstRecord['shift']}'),
+                const SizedBox(height: 10),
+                const Text('Courses:', style: TextStyle(fontWeight: FontWeight.bold)),
+                ...records.map((course) => ListTile(
+                  title: Text(course['coursetitle']),
+                  subtitle: Text('Code: ${course['coursecode']} | Marks: ${course['obtainedmarks']}'),
+                  trailing: Text('Sem ${course['mysemester']}'),
+                )).toList(),
+              ],
             ),
-          ),
-          Expanded(
-            child: Text(value),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildSemesterExpansionPanel(String semester, List<dynamic> courses) {
-    return ExpansionTile(
-      title: Text(
-        'Semester $semester',
-        style: const TextStyle(fontWeight: FontWeight.bold),
-      ),
-      children: [
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: DataTable(
-            columns: const [
-              DataColumn(label: Text('Course Code')),
-              DataColumn(label: Text('Course Title')),
-              DataColumn(label: Text('Credit Hrs'), numeric: true),
-              DataColumn(label: Text('Marks'), numeric: true),
-              DataColumn(label: Text('Status')),
-            ],
-            rows: courses.map((course) {
-              return DataRow(
-                cells: [
-                  DataCell(Text(course['coursecode'] ?? 'N/A')),
-                  DataCell(Text(course['coursetitle'] ?? 'N/A')),
-                  DataCell(Text(course['credithours'] ?? 'N/A')),
-                  DataCell(Text(course['obtainedmarks']?.toString() ?? 'N/A')),
-                  DataCell(Text(course['consider_status'] ?? 'N/A')),
-                ],
-              );
-            }).toList(),
-          ),
-        ),
-      ],
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    final semesterGroups = _groupBySemester();
-    final semesters = semesterGroups.keys.toList()..sort();
-    
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Student Academic Record'),
+        title: const Text('Student Records'),
         actions: [
           IconButton(
             icon: const Icon(Icons.delete),
@@ -214,6 +153,15 @@ class _HomeScreenState extends State<HomeScreen> {
             tooltip: 'Refresh Data',
           ),
         ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => AddStudentScreen(onSave: _addNewStudent),
+          ),
+        ),
+        child: const Icon(Icons.add),
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -231,25 +179,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   ),
                 )
-              : SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      _buildStudentInfoCard(),
-                      const SizedBox(height: 16),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Text(
-                          'Academic Record',
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                        ),
-                      ),
-                      ...semesters.map((semester) => 
-                        _buildSemesterExpansionPanel(semester, semesterGroups[semester]!)
-                      ).toList(),
-                    ],
-                  ),
+              : ListView(
+                  children: studentsMap.entries
+                      .map((entry) => _buildStudentCard(entry.key, entry.value))
+                      .toList(),
                 ),
     );
   }
