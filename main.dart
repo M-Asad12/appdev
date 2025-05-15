@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
-import 'db_helper.dart';
 
-void main() {
-  runApp(const MyApp());
-}
+void main() => runApp(const MyApp());
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -11,136 +8,57 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      title: 'Simple App',
+      home: const MainScreen(),
       debugShowCheckedModeBanner: false,
-      title: 'Student Records',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-      ),
-      home: const StudentListScreen(),
     );
   }
 }
 
-class StudentListScreen extends StatefulWidget {
-  const StudentListScreen({super.key});
-
-  @override
-  State<StudentListScreen> createState() => _StudentListScreenState();
-}
-
-class _StudentListScreenState extends State<StudentListScreen> {
-  final TextEditingController _nameController = TextEditingController();
-  List<Map<String, dynamic>> _students = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _refreshStudentList();
-  }
-
-  Future<void> _refreshStudentList() async {
-    final data = await DBHelper.getAllStudents();
-    setState(() {
-      _students = data;
-    });
-  }
-
-  Future<void> _addStudent() async {
-    if (_nameController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a name')),
-      );
-      return;
-    }
-
-    await DBHelper.addStudent(_nameController.text.trim());
-    _nameController.clear();
-    _refreshStudentList();
-  }
-
-  Future<void> _deleteStudent(int id) async {
-    await DBHelper.deleteStudent(id);
-    _refreshStudentList();
-  }
+class MainScreen extends StatelessWidget {
+  const MainScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Student Records'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _refreshStudentList,
-          ),
-        ],
+        title: const Text('My Simple App'),
       ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _nameController,
-                    decoration: const InputDecoration(
-                      labelText: 'Student Name',
-                      border: OutlineInputBorder(),
-                      hintText: 'Enter student name',
-                    ),
-                    onSubmitted: (_) => _addStudent(),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                ElevatedButton(
-                  onPressed: _addStudent,
-                  child: const Text('Add'),
-                ),
-              ],
+      drawer: Drawer(
+        child: ListView(
+          children: [
+            const DrawerHeader(
+              child: Text('Menu'),
             ),
-          ),
-          Expanded(
-            child: _students.isEmpty
-                ? const Center(
-                    child: Text(
-                      'No students found',
-                      style: TextStyle(fontSize: 18),
-                    ),
-                  )
-                : ListView.builder(
-                    itemCount: _students.length,
-                    itemBuilder: (context, index) {
-                      final student = _students[index];
-                      return Card(
-                        margin: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 4),
-                        child: ListTile(
-                          title: Text(
-                            student['name'],
-                            style: const TextStyle(fontSize: 18),
-                          ),
-                          subtitle: Text(
-                            'ID: ${student['id']} • Added: ${DateTime.parse(student['createdAt']).toString().substring(0, 16)}',
-                          ),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.red),
-                            onPressed: () => _deleteStudent(student['id']),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-          ),
-        ],
+            ListTile(
+              leading: const Icon(Icons.home),
+              title: const Text('Home'),
+              onTap: () => Navigator.pop(context),
+            ),
+            ListTile(
+              leading: const Icon(Icons.settings),
+              title: const Text('Settings'),
+              onTap: () => Navigator.pop(context),
+            ),
+          ],
+        ),
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Image.network(
+              'https://picsum.photos/300/200',
+              height: 200,
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'Welcome to my app!',
+              style: TextStyle(fontSize: 24),
+            ),
+          ],
+        ),
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    super.dispose();
   }
 }
